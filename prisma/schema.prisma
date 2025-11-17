@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,24 +8,22 @@ datasource db {
 }
 
 model Vendedor {
-  id        String   @id @default(uuid())
-  nome      String
-  email     String   @unique
-  telefone  String
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relações
+  id         String              @id @default(uuid())
+  nome       String
+  email      String              @unique
+  telefone   String
+  ativo      Boolean             @default(true)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
   clientes   Cliente[]
-  pedidos    Pedido[]
   interacoes InteracaoWhatsApp[]
+  pedidos    Pedido[]
 
   @@map("vendedores")
 }
 
 model Cliente {
-  id                String    @id @default(uuid())
+  id                String              @id @default(uuid())
   nome              String
   telefone          String
   email             String?
@@ -37,32 +32,28 @@ model Cliente {
   observacoes       String?
   ultimaCompraData  DateTime?
   vendedorId        String
-  ativo             Boolean   @default(true)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  // Relações
+  ativo             Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  alertas           Alerta[]
   vendedor          Vendedor            @relation(fields: [vendedorId], references: [id])
-  pedidos           Pedido[]
   etiquetas         EtiquetaWhatsApp[]
   interacoes        InteracaoWhatsApp[]
-  alertas           Alerta[]
+  pedidos           Pedido[]
   produtosFavoritos ProdutoFavorito[]
 
   @@map("clientes")
 }
 
 model Produto {
-  id         String   @id @default(uuid())
-  nome       String
-  categoria  String
-  preco      Decimal  @db.Decimal(10, 2)
-  descricao  String?
-  ativo      Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // Relações
+  id                String            @id @default(uuid())
+  nome              String
+  categoria         String
+  preco             Decimal           @db.Decimal(10, 2)
+  descricao         String?
+  ativo             Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
   itensPedido       ItemPedido[]
   produtosFavoritos ProdutoFavorito[]
   tabelasPreco      TabelaPreco[]
@@ -71,20 +62,18 @@ model Produto {
 }
 
 model Pedido {
-  id         String      @id @default(uuid())
-  clienteId  String
-  vendedorId String
-  dataPedido DateTime    @default(now())
-  status     StatusPedido @default(ABERTO)
-  valorTotal Decimal     @db.Decimal(10, 2)
+  id          String       @id @default(uuid())
+  clienteId   String
+  vendedorId  String
+  dataPedido  DateTime     @default(now())
+  status      StatusPedido @default(ABERTO)
+  valorTotal  Decimal      @db.Decimal(10, 2)
   observacoes String?
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-
-  // Relações
-  cliente Cliente      @relation(fields: [clienteId], references: [id])
-  vendedor Vendedor    @relation(fields: [vendedorId], references: [id])
-  itens   ItemPedido[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  itens       ItemPedido[]
+  cliente     Cliente      @relation(fields: [clienteId], references: [id])
+  vendedor    Vendedor     @relation(fields: [vendedorId], references: [id])
 
   @@map("pedidos")
 }
@@ -96,53 +85,45 @@ model ItemPedido {
   quantidade    Int
   precoUnitario Decimal @db.Decimal(10, 2)
   subtotal      Decimal @db.Decimal(10, 2)
-
-  // Relações
-  pedido  Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  produto Produto @relation(fields: [produtoId], references: [id])
+  pedido        Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  produto       Produto @relation(fields: [produtoId], references: [id])
 
   @@map("itens_pedido")
 }
 
 model EtiquetaWhatsApp {
-  id            String   @id @default(uuid())
-  descricao     String
-  clienteId     String
-  dataMarcacao  DateTime @default(now())
-  ativa         Boolean  @default(true)
-
-  // Relações
-  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid())
+  descricao    String
+  clienteId    String
+  dataMarcacao DateTime @default(now())
+  ativa        Boolean  @default(true)
+  cliente      Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   @@map("etiquetas_whatsapp")
 }
 
 model InteracaoWhatsApp {
-  id         String          @id @default(uuid())
+  id         String        @id @default(uuid())
   clienteId  String
   vendedorId String?
-  dataHora   DateTime        @default(now())
+  dataHora   DateTime      @default(now())
   tipo       TipoInteracao
   conteudo   String
-  
-  // Relações
-  cliente  Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  vendedor Vendedor? @relation(fields: [vendedorId], references: [id])
+  cliente    Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  vendedor   Vendedor?     @relation(fields: [vendedorId], references: [id])
 
   @@map("interacoes_whatsapp")
 }
 
 model Alerta {
-  id          String      @id @default(uuid())
+  id          String       @id @default(uuid())
   clienteId   String
   tipo        TipoAlerta
-  dataCriacao DateTime    @default(now())
+  dataCriacao DateTime     @default(now())
   status      StatusAlerta @default(PENDENTE)
   mensagem    String
-  urgencia    Urgencia    @default(MEDIA)
-
-  // Relações
-  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  urgencia    Urgencia     @default(MEDIA)
+  cliente     Cliente      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   @@map("alertas")
 }
@@ -153,31 +134,26 @@ model ProdutoFavorito {
   produtoId  String
   frequencia Int      @default(0)
   createdAt  DateTime @default(now())
-
-  // Relações
-  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  produto Produto @relation(fields: [produtoId], references: [id])
+  cliente    Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  produto    Produto  @relation(fields: [produtoId], references: [id])
 
   @@unique([clienteId, produtoId])
   @@map("produtos_favoritos")
 }
 
 model TabelaPreco {
-  id             String   @id @default(uuid())
-  produtoId      String
+  id                String   @id @default(uuid())
+  produtoId         String
   clienteEspecifico String?
-  preco          Decimal  @db.Decimal(10, 2)
-  descricao      String?
-  ativa          Boolean  @default(true)
-  createdAt      DateTime @default(now())
-
-  // Relações
-  produto Produto @relation(fields: [produtoId], references: [id])
+  preco             Decimal  @db.Decimal(10, 2)
+  descricao         String?
+  ativa             Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  produto           Produto  @relation(fields: [produtoId], references: [id])
 
   @@map("tabelas_preco")
 }
 
-// Enums
 enum StatusPedido {
   ABERTO
   FECHADO
