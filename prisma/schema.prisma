@@ -1,0 +1,208 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Vendedor {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  telefone  String
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  clientes   Cliente[]
+  pedidos    Pedido[]
+  interacoes InteracaoWhatsApp[]
+
+  @@map("vendedores")
+}
+
+model Cliente {
+  id                String    @id @default(uuid())
+  nome              String
+  telefone          String
+  email             String?
+  dataNascimento    DateTime?
+  endereco          String?
+  observacoes       String?
+  ultimaCompraData  DateTime?
+  vendedorId        String
+  ativo             Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relações
+  vendedor          Vendedor            @relation(fields: [vendedorId], references: [id])
+  pedidos           Pedido[]
+  etiquetas         EtiquetaWhatsApp[]
+  interacoes        InteracaoWhatsApp[]
+  alertas           Alerta[]
+  produtosFavoritos ProdutoFavorito[]
+
+  @@map("clientes")
+}
+
+model Produto {
+  id         String   @id @default(uuid())
+  nome       String
+  categoria  String
+  preco      Decimal  @db.Decimal(10, 2)
+  descricao  String?
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relações
+  itensPedido       ItemPedido[]
+  produtosFavoritos ProdutoFavorito[]
+  tabelasPreco      TabelaPreco[]
+
+  @@map("produtos")
+}
+
+model Pedido {
+  id         String      @id @default(uuid())
+  clienteId  String
+  vendedorId String
+  dataPedido DateTime    @default(now())
+  status     StatusPedido @default(ABERTO)
+  valorTotal Decimal     @db.Decimal(10, 2)
+  observacoes String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  // Relações
+  cliente Cliente      @relation(fields: [clienteId], references: [id])
+  vendedor Vendedor    @relation(fields: [vendedorId], references: [id])
+  itens   ItemPedido[]
+
+  @@map("pedidos")
+}
+
+model ItemPedido {
+  id            String  @id @default(uuid())
+  pedidoId      String
+  produtoId     String
+  quantidade    Int
+  precoUnitario Decimal @db.Decimal(10, 2)
+  subtotal      Decimal @db.Decimal(10, 2)
+
+  // Relações
+  pedido  Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  produto Produto @relation(fields: [produtoId], references: [id])
+
+  @@map("itens_pedido")
+}
+
+model EtiquetaWhatsApp {
+  id            String   @id @default(uuid())
+  descricao     String
+  clienteId     String
+  dataMarcacao  DateTime @default(now())
+  ativa         Boolean  @default(true)
+
+  // Relações
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@map("etiquetas_whatsapp")
+}
+
+model InteracaoWhatsApp {
+  id         String          @id @default(uuid())
+  clienteId  String
+  vendedorId String?
+  dataHora   DateTime        @default(now())
+  tipo       TipoInteracao
+  conteudo   String
+  
+  // Relações
+  cliente  Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  vendedor Vendedor? @relation(fields: [vendedorId], references: [id])
+
+  @@map("interacoes_whatsapp")
+}
+
+model Alerta {
+  id          String      @id @default(uuid())
+  clienteId   String
+  tipo        TipoAlerta
+  dataCriacao DateTime    @default(now())
+  status      StatusAlerta @default(PENDENTE)
+  mensagem    String
+  urgencia    Urgencia    @default(MEDIA)
+
+  // Relações
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@map("alertas")
+}
+
+model ProdutoFavorito {
+  id         String   @id @default(uuid())
+  clienteId  String
+  produtoId  String
+  frequencia Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  // Relações
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  produto Produto @relation(fields: [produtoId], references: [id])
+
+  @@unique([clienteId, produtoId])
+  @@map("produtos_favoritos")
+}
+
+model TabelaPreco {
+  id             String   @id @default(uuid())
+  produtoId      String
+  clienteEspecifico String?
+  preco          Decimal  @db.Decimal(10, 2)
+  descricao      String?
+  ativa          Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  // Relações
+  produto Produto @relation(fields: [produtoId], references: [id])
+
+  @@map("tabelas_preco")
+}
+
+// Enums
+enum StatusPedido {
+  ABERTO
+  FECHADO
+  CANCELADO
+}
+
+enum TipoInteracao {
+  ENVIADA
+  RECEBIDA
+}
+
+enum TipoAlerta {
+  CLIENTE_INATIVO
+  ORCAMENTO_ABERTO
+  ANIVERSARIO
+  FOLLOWUP
+}
+
+enum StatusAlerta {
+  PENDENTE
+  RESOLVIDO
+}
+
+enum Urgencia {
+  ALTA
+  MEDIA
+  BAIXA
+}
