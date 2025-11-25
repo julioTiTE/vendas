@@ -377,53 +377,62 @@ export default function DashboardPage() {
         </Tabs>
 
         {/* Navigation Buttons */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Link href="/clientes" className="block">
-            <Button
-              variant="outline"
-              className="w-full bg-card hover:bg-secondary/10 border-border hover:border-primary/50 transition-all"
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Clientes
-            </Button>
-          </Link>
-          <Link href="/vendedores" className="block">
-            <Button
-              variant="outline"
-              className="w-full bg-card hover:bg-secondary/10 border-border hover:border-primary/50 transition-all"
-            >
-              <User className="h-4 w-4 mr-2" />
-              Vendedores
-            </Button>
-          </Link>
-          <Link href="/produtos" className="block">
-            <Button
-              variant="outline"
-              className="w-full bg-card hover:bg-secondary/10 border-border hover:border-primary/50 transition-all"
-            >
-              <Package className="h-4 w-4 mr-2" />
-              Produtos
-            </Button>
-          </Link>
-          <Link href="/orcamentos" className="block">
-            <Button
-              variant="outline"
-              className="w-full bg-card hover:bg-secondary/10 border-border hover:border-primary/50 transition-all"
-            >
-              <Target className="h-4 w-4 mr-2" />
-              Orçamentos
-            </Button>
-          </Link>
-          <Link href="/relatorios" className="block">
-            <Button
-              variant="outline"
-              className="w-full bg-card hover:bg-secondary/10 border-border hover:border-primary/50 transition-all"
-            >
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Relatórios
-            </Button>
-          </Link>
-        </div>
+<div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+  <Link href="/clientes" className="block">
+    <Button
+      variant="outline"
+      className="w-full bg-card hover:bg-secondary/10 border-border hover:border-primary/50 transition-all"
+    >
+      <Users className="h-4 w-4 mr-2" />
+      Clientes
+    </Button>
+  </Link>
+  <Link href="/vendedores" className="block">
+    <Button
+      variant="outline"
+      className="w-full bg-card hover:bg-secondary/10 border-border hover:border-primary/50 transition-all"
+    >
+      <User className="h-4 w-4 mr-2" />
+      Vendedores
+    </Button>
+  </Link>
+  <Link href="/produtos" className="block">
+    <Button
+      variant="outline"
+      className="w-full bg-card hover:bg-secondary/10 border-border hover:border-primary/50 transition-all"
+    >
+      <Package className="h-4 w-4 mr-2" />
+      Produtos
+    </Button>
+  </Link>
+  <Link href="/orcamentos" className="block">
+    <Button
+      variant="outline"
+      className="w-full bg-card hover:bg-secondary/10 border-border hover:border-primary/50 transition-all"
+    >
+      <Target className="h-4 w-4 mr-2" />
+      Orçamentos
+    </Button>
+  </Link>
+  <Link href="/alertas" className="block">
+    <Button
+      variant="outline"
+      className="w-full bg-card hover:bg-secondary/10 border-border hover:border-primary/50 transition-all"
+    >
+      <MessageCircle className="h-4 w-4 mr-2" />
+      Alertas
+    </Button>
+  </Link>
+  <Link href="/relatorios" className="block">
+    <Button
+      variant="outline"
+      className="w-full bg-card hover:bg-secondary/10 border-border hover:border-primary/50 transition-all"
+    >
+      <TrendingUp className="h-4 w-4 mr-2" />
+      Relatórios
+    </Button>
+  </Link>
+</div>
       </div>
     </main>
   )
