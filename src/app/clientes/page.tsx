@@ -159,9 +159,6 @@ export default function ClientsPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold">Clientes</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              🟢 Baixa: &lt;3 meses | 🟡 Média: 3-6 meses | 🔴 Urgente: &gt;6 meses
-            </p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
