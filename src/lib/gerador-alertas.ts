@@ -1,7 +1,7 @@
 // lib/gerador-alertas.ts
 import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { toZonedTime, fromZonedTime, format } from 'date-fns-tz';
+import { differenceInCalendarDays, setHours, setMinutes, setSeconds, setMilliseconds } from 'date-fns';
 
 interface AlertaGerado {
   clienteId: string;
@@ -13,10 +13,11 @@ interface AlertaGerado {
 }
 
 export class GeradorAlertas {
-   private prisma: PrismaClient; // ← ADICIONAR ESTA LINHA
+  private prisma: PrismaClient;
+  private readonly TIMEZONE = 'America/Sao_Paulo';
 
   constructor() {
-    this.prisma = new PrismaClient(); // ← ADICIONAR ESTA LINHA
+    this.prisma = new PrismaClient();
   }
   
   /**
@@ -37,112 +38,117 @@ export class GeradorAlertas {
   }
 
   /**
- * Gera alertas de aniversário (próximos 7 dias)
- */
-private async gerarAlertasAniversario(): Promise<void> {
-  // Usa horário de Brasília (GMT-3)
-  const hoje = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-  hoje.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas a data
-  
-  const daquiA7Dias = new Date(hoje);
-  daquiA7Dias.setDate(hoje.getDate() + 7);
-
-  console.log('📅 Verificando aniversários...');
-  console.log('Hoje (Brasil):', hoje.toLocaleDateString('pt-BR'));
-  console.log('Até:', daquiA7Dias.toLocaleDateString('pt-BR'));
-
-  const clientes = await this.prisma.cliente.findMany({
-    where: {
-      ativo: true,
-      dataNascimento: {
-        not: null
-      }
-    },
-    include: {
-      vendedor: true
-    }
-  });
-
-  console.log(`📊 Total de clientes com data de nascimento: ${clientes.length}`);
-
-  const alertasCriados = [];
-
-  for (const cliente of clientes) {
-    if (!cliente.dataNascimento) continue;
-
-    const nascimento = new Date(cliente.dataNascimento);
+   * Gera alertas de aniversário (próximos 7 dias)
+   */
+  private async gerarAlertasAniversario(): Promise<void> {
+    // Pega a data atual no fuso horário de São Paulo
+    const agoraUTC = new Date();
+    const agora = toZonedTime(agoraUTC, this.TIMEZONE);
     
-    // Cria uma data com o aniversário deste ano
-    const aniversarioEsteAno = new Date(
-      hoje.getFullYear(),
-      nascimento.getMonth(),
-      nascimento.getDate(),
-      0, 0, 0, 0
-    );
+    // Zera as horas para comparar apenas datas
+    const hoje = setMilliseconds(setSeconds(setMinutes(setHours(agora, 0), 0), 0), 0);
+    
+    const daquiA7Dias = new Date(hoje);
+    daquiA7Dias.setDate(hoje.getDate() + 7);
 
-    // Se o aniversário já passou este ano, considera o próximo ano
-    if (aniversarioEsteAno < hoje) {
-      aniversarioEsteAno.setFullYear(hoje.getFullYear() + 1);
-    }
+    console.log('📅 Verificando aniversários...');
+    console.log('Agora (UTC):', agoraUTC.toISOString());
+    console.log('Agora (Brasil):', format(agora, 'dd/MM/yyyy HH:mm:ss', { timeZone: this.TIMEZONE }));
+    console.log('Hoje (Brasil):', format(hoje, 'dd/MM/yyyy', { timeZone: this.TIMEZONE }));
 
-    // Calcula diferença em dias (sem considerar horas)
-    const diffDays = Math.floor((aniversarioEsteAno.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-
-    console.log(`👤 ${cliente.nome}:`);
-    console.log(`   Nascimento: ${nascimento.toLocaleDateString('pt-BR')}`);
-    console.log(`   Aniversário este ano: ${aniversarioEsteAno.toLocaleDateString('pt-BR')}`);
-    console.log(`   Dias até aniversário: ${diffDays}`);
-
-    // Gera alerta se falta 0 a 7 dias
-    if (diffDays >= 0 && diffDays <= 7) {
-      const alertaExistente = await this.prisma.alerta.findFirst({
-        where: {
-          clienteId: cliente.id,
-          tipo: 'ANIVERSARIO',
-          status: 'PENDENTE'
+    const clientes = await this.prisma.cliente.findMany({
+      where: {
+        ativo: true,
+        dataNascimento: {
+          not: null
         }
-      });
+      },
+      include: {
+        vendedor: true
+      }
+    });
 
-      if (!alertaExistente) {
-        let mensagem = '';
-        let urgencia: 'ALTA' | 'MEDIA' | 'BAIXA' = 'MEDIA';
+    console.log(`📊 Total de clientes: ${clientes.length}`);
 
-        if (diffDays === 0) {
-          mensagem = `🎂 Aniversário de ${cliente.nome} hoje!`;
-          urgencia = 'ALTA';
-        } else if (diffDays === 1) {
-          mensagem = `🎉 Aniversário de ${cliente.nome} amanhã!`;
-          urgencia = 'ALTA';
-        } else if (diffDays <= 3) {
-          mensagem = `🎂 Aniversário de ${cliente.nome} em ${diffDays} dias`;
-          urgencia = 'MEDIA';
-        } else {
-          mensagem = `Aniversário de ${cliente.nome} em ${diffDays} dias`;
-          urgencia = 'BAIXA';
-        }
+    const alertasCriados = [];
 
-        const alerta = await this.prisma.alerta.create({
-          data: {
+    for (const cliente of clientes) {
+      if (!cliente.dataNascimento) continue;
+
+      const nascimento = new Date(cliente.dataNascimento);
+      
+      // Dia e mês do aniversário
+      const diaAniversario = nascimento.getDate();
+      const mesAniversario = nascimento.getMonth();
+      
+      // Aniversário deste ano no horário do Brasil
+      let aniversarioEsteAno = new Date(hoje.getFullYear(), mesAniversario, diaAniversario, 0, 0, 0, 0);
+      
+      // Se já passou este ano, considera o próximo ano
+      if (aniversarioEsteAno < hoje) {
+        aniversarioEsteAno = new Date(hoje.getFullYear() + 1, mesAniversario, diaAniversario, 0, 0, 0, 0);
+      }
+
+      // Calcula diferença em dias
+      const diffDays = differenceInCalendarDays(aniversarioEsteAno, hoje);
+
+      console.log(`👤 ${cliente.nome}:`);
+      console.log(`   Nascimento: ${format(nascimento, 'dd/MM/yyyy')}`);
+      console.log(`   Aniversário: ${format(aniversarioEsteAno, 'dd/MM/yyyy')}`);
+      console.log(`   Hoje: ${format(hoje, 'dd/MM/yyyy')}`);
+      console.log(`   Dias até aniversário: ${diffDays}`);
+
+      // Gera alerta se falta 0 a 7 dias
+      if (diffDays >= 0 && diffDays <= 7) {
+        const alertaExistente = await this.prisma.alerta.findFirst({
+          where: {
             clienteId: cliente.id,
             tipo: 'ANIVERSARIO',
-            mensagem,
-            urgencia,
             status: 'PENDENTE'
           }
         });
 
-        alertasCriados.push(alerta);
-        console.log(`   ✅ Alerta criado: ${mensagem}`);
+        if (!alertaExistente) {
+          let mensagem = '';
+          let urgencia: 'ALTA' | 'MEDIA' | 'BAIXA' = 'MEDIA';
+
+          if (diffDays === 0) {
+            mensagem = `🎂 Aniversário de ${cliente.nome} hoje!`;
+            urgencia = 'ALTA';
+          } else if (diffDays === 1) {
+            mensagem = `🎉 Aniversário de ${cliente.nome} amanhã!`;
+            urgencia = 'ALTA';
+          } else if (diffDays <= 3) {
+            mensagem = `🎂 Aniversário de ${cliente.nome} em ${diffDays} dias`;
+            urgencia = 'MEDIA';
+          } else {
+            mensagem = `Aniversário de ${cliente.nome} em ${diffDays} dias`;
+            urgencia = 'BAIXA';
+          }
+
+          const alerta = await this.prisma.alerta.create({
+            data: {
+              clienteId: cliente.id,
+              tipo: 'ANIVERSARIO',
+              mensagem,
+              urgencia,
+              status: 'PENDENTE'
+            }
+          });
+
+          alertasCriados.push(alerta);
+          console.log(`   ✅ Alerta criado: ${mensagem}`);
+        } else {
+          console.log(`   ⏭️  Alerta já existe`);
+        }
       } else {
-        console.log(`   ⏭️  Alerta já existe`);
+        console.log(`   ⏭️  Fora do range (${diffDays} dias)`);
       }
-    } else {
-      console.log(`   ⏭️  Fora do range (${diffDays} dias)`);
     }
+
+    console.log(`✅ ${alertasCriados.length} alertas de aniversário criados`);
   }
 
-  console.log(`✅ ${alertasCriados.length} alertas de aniversário criados`);
-}
   /**
    * Clientes inativos (sem compra há X dias)
    */
@@ -154,7 +160,7 @@ private async gerarAlertasAniversario(): Promise<void> {
       const dataLimite = new Date();
       dataLimite.setDate(hoje.getDate() - dias);
 
-      const clientes = await prisma.cliente.findMany({
+      const clientes = await this.prisma.cliente.findMany({
         where: {
           ativo: true,
           OR: [
@@ -195,7 +201,7 @@ private async gerarAlertasAniversario(): Promise<void> {
         if (cliente.alertas.length === 0) {
           const urgencia = dias >= 90 ? 'ALTA' : dias >= 60 ? 'MEDIA' : 'BAIXA';
 
-          await prisma.alerta.create({
+          await this.prisma.alerta.create({
             data: {
               clienteId: cliente.id,
               tipo: 'CLIENTE_INATIVO',
@@ -222,7 +228,7 @@ private async gerarAlertasAniversario(): Promise<void> {
       const dataLimite = new Date();
       dataLimite.setDate(hoje.getDate() - dias);
 
-      const pedidosAbertos = await prisma.pedido.findMany({
+      const pedidosAbertos = await this.prisma.pedido.findMany({
         where: {
           status: 'ABERTO',
           dataPedido: {
@@ -252,7 +258,7 @@ private async gerarAlertasAniversario(): Promise<void> {
         if (pedido.cliente.alertas.length === 0) {
           const urgencia = dias >= 15 ? 'ALTA' : dias >= 7 ? 'MEDIA' : 'BAIXA';
 
-          await prisma.alerta.create({
+          await this.prisma.alerta.create({
             data: {
               clienteId: pedido.clienteId,
               tipo: 'ORCAMENTO_ABERTO',
@@ -275,7 +281,7 @@ private async gerarAlertasAniversario(): Promise<void> {
     const dataLimite = new Date();
     dataLimite.setDate(dataLimite.getDate() - 30);
 
-    const resultado = await prisma.alerta.deleteMany({
+    const resultado = await this.prisma.alerta.deleteMany({
       where: {
         status: 'RESOLVIDO',
         dataCriacao: {
@@ -289,3 +295,5 @@ private async gerarAlertasAniversario(): Promise<void> {
     }
   }
 }
+
+export const geradorAlertas = new GeradorAlertas();
