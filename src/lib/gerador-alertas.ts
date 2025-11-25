@@ -40,15 +40,17 @@ export class GeradorAlertas {
  * Gera alertas de aniversário (próximos 7 dias)
  */
 private async gerarAlertasAniversario(): Promise<void> {
-  const hoje = new Date();
-  const daquiA7Dias = new Date();
+  // Usa horário de Brasília (GMT-3)
+  const hoje = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  hoje.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas a data
+  
+  const daquiA7Dias = new Date(hoje);
   daquiA7Dias.setDate(hoje.getDate() + 7);
 
   console.log('📅 Verificando aniversários...');
-  console.log('Hoje:', hoje.toLocaleDateString('pt-BR'));
+  console.log('Hoje (Brasil):', hoje.toLocaleDateString('pt-BR'));
   console.log('Até:', daquiA7Dias.toLocaleDateString('pt-BR'));
 
-  // Busca todos os clientes com data de nascimento
   const clientes = await this.prisma.cliente.findMany({
     where: {
       ativo: true,
@@ -74,26 +76,25 @@ private async gerarAlertasAniversario(): Promise<void> {
     const aniversarioEsteAno = new Date(
       hoje.getFullYear(),
       nascimento.getMonth(),
-      nascimento.getDate()
+      nascimento.getDate(),
+      0, 0, 0, 0
     );
 
-    // Se o aniversário já passou, considera o próximo ano
+    // Se o aniversário já passou este ano, considera o próximo ano
     if (aniversarioEsteAno < hoje) {
       aniversarioEsteAno.setFullYear(hoje.getFullYear() + 1);
     }
 
-    // Calcula diferença em dias
-    const diffTime = aniversarioEsteAno.getTime() - hoje.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // Calcula diferença em dias (sem considerar horas)
+    const diffDays = Math.floor((aniversarioEsteAno.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 
     console.log(`👤 ${cliente.nome}:`);
     console.log(`   Nascimento: ${nascimento.toLocaleDateString('pt-BR')}`);
-    console.log(`   Aniversário: ${aniversarioEsteAno.toLocaleDateString('pt-BR')}`);
+    console.log(`   Aniversário este ano: ${aniversarioEsteAno.toLocaleDateString('pt-BR')}`);
     console.log(`   Dias até aniversário: ${diffDays}`);
 
     // Gera alerta se falta 0 a 7 dias
     if (diffDays >= 0 && diffDays <= 7) {
-      // Verifica se já existe alerta pendente
       const alertaExistente = await this.prisma.alerta.findFirst({
         where: {
           clienteId: cliente.id,
@@ -136,13 +137,12 @@ private async gerarAlertasAniversario(): Promise<void> {
         console.log(`   ⏭️  Alerta já existe`);
       }
     } else {
-      console.log(`   ⏭️  Aniversário muito distante (${diffDays} dias)`);
+      console.log(`   ⏭️  Fora do range (${diffDays} dias)`);
     }
   }
 
   console.log(`✅ ${alertasCriados.length} alertas de aniversário criados`);
 }
-
   /**
    * Clientes inativos (sem compra há X dias)
    */
